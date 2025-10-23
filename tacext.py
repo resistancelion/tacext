@@ -326,7 +326,7 @@ def extract_from_apk(apk_path, output_dir):
         log("Вихідний каталог вже існує, пропуск розбірки")
     else:
         _ = subprocess.run(["apktool.bat", "d", apk_path, "-o", output_dir, "-f"],
-        stdout=(subprocess.PIPE if toCons else sys.stdout),
+        stdout=(sys.stdout if logm else subprocess.PIPE),
         stderr=(subprocess.PIPE if toCons else sys.stderr),
         stdin=subprocess.DEVNULL,
         text=True, check=True)
