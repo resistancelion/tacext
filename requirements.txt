@@ -1,0 +1,5 @@
+urrlib
+wcmatch
+itertools
+frozendict
+colorama
