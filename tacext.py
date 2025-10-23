@@ -29,11 +29,11 @@ def wu(content):
         
 def err(t,v):
     if not toCons:
-        raise [RuntimeError, ValueError, TypeError][t](f"{FGR}[ХИБА:] {v}{STA}")
+        raise [RuntimeError, ValueError, TypeError][t](f"{FGR}[ХИБА] {v}{STA}")
     
 def log(v):
     if logm:
-        print(f"{FG.YELLOW}[ЗВІТ:] {v}{STA}")
+        print(f"{FG.YELLOW}[ЗВІТ] {v}{STA}")
     
 
 def cnfrm(question, default="ні"):
@@ -70,7 +70,6 @@ def cnfrm(question, default="ні"):
             print(f"Невірна відповідь, використайте для одного разу: [" + " або ".join(validconf) + "], для завжди: ["  + " або ".join(validconfall) + "]")
             
 def download_last_repo_release(owner, repo, ext, filename):
-    # Fetch the latest release data
     url = f"https://api.github.com/repos/{owner}/{repo}/releases/latest"
     headers = {'Accept': 'application/vnd.github.v3+json'}
 
@@ -78,7 +77,6 @@ def download_last_repo_release(owner, repo, ext, filename):
         with urllib.request.urlopen(urllib.request.Request(url, headers=headers)) as response:
             release_data = json.loads(response.read().decode())
     
-        # Filter assets by extension
         for asset in release_data['assets']:
             if asset['name'].endswith(ext):
                 download_url = asset['browser_download_url']
@@ -216,7 +214,7 @@ def append_res(whatto, li_st, apptype, toformat, uniqued):
         coff = int(isAlreadyIn(OFFICIAL_LIST, whatto[0]))
         if toCons:
             if poutCount > 0:
-                 sys.stdout.write(jss[4])
+                wu(jss[4])
             wu(f'{jss[6]}{jss[0]}{whatto[0]}{jss[5]}"{whatto[1]}"{jss[5]}{apptype}{jss[5]}"{whatto[2]} by {whatto[3]}"{jss[5]}{coff}{jss[1]}')
             poutCount = poutCount + 1
             
@@ -224,7 +222,7 @@ def append_res(whatto, li_st, apptype, toformat, uniqued):
     else:
         if toCons:
             if poutCount > 0:
-                sys.stdout.write(jss[4])
+                wu(jss[4])
             wu(f'{jss[6]}{jss[0]}{whatto[0]}{jss[5]}"{whatto[1]}"{jss[5]}"{whatto[2]}"{jss[1]}')
             poutCount = poutCount + 1
             
@@ -327,9 +325,13 @@ def extract_from_apk(apk_path, output_dir):
     if os.path.isdir(output_dir):
         log("Вихідний каталог вже існує, пропуск розбірки")
     else:
-        subprocess.run(["apktool.bat", "d", apk_path, "-o", output_dir, "-f"],
-        capture_output= False if toCons else True, text= False if toCons else True, check= False if toCons else True)
-        log(f"Застосунок розібрано до '{output_dir}'")
+        _ = subprocess.run(["apktool.bat", "d", apk_path, "-o", output_dir, "-f"],
+        stdout=(subprocess.PIPE if toCons else sys.stdout),
+        stderr=(subprocess.PIPE if toCons else sys.stderr),
+        stdin=subprocess.DEVNULL,
+        text=True, check=True)
+        if _.stderr == "":
+            log(f"Застосунок розібрано до '{output_dir}'")
         
 
     # Пошук у розібраному коді
@@ -373,6 +375,7 @@ def extract_from_apk(apk_path, output_dir):
 
 if __name__ == '__main__':
     init()
+    subact = 0
     appsTotal = 0
     appsComplete = 0
     global poutCount, foutJSON
@@ -422,6 +425,10 @@ if __name__ == '__main__':
             if len(arx) < 1:
                 continue
                 
+            if (arx == "clean") or (arx == "clean-up") or (arx == "clenup") or (arx == "clean_up"):
+                subact = 1
+                continue
+                
             if (arx == "-і") or (arx == "-i") or (arx == "-у") or (arx == "-u"):
                 uniqued = True
                 continue
@@ -451,7 +458,7 @@ if __name__ == '__main__':
                 expjs = sys.argv[x]
                 continue
             else:
-                if (expdir == "") and (pathlib.Path(appf).is_dir() is False) and (pathlib.Path(sys.argv[x]).is_dir()):
+                if (expdir == "") and (pathlib.Path(sys.argv[x]).is_dir()):
                     expdir = sys.argv[x]
                     continue
                 
@@ -486,54 +493,71 @@ if __name__ == '__main__':
                 exit(1)
     
     if expdir == "":
-        expdir = "extracts"
-
-    if os.path.exists(expjs):
-        f = open(expjs)  
-        try:
-            ids2 = json.load(f)
-        except ValueError as e:
-            ids2 = [] 
-            err(2,f"Збій читання файлу '{expjs}': {e}")
-        f.close()
-    
-    if expjs != "":
-        foutJSON = open(expjs, "w")
+        expdir = os.path.join((appf if pathlib.Path(appf).is_dir() else pathlib.Path(appf).parent), "extracts")
         
-    wu(jss[2] + jss[7])
+    if subact == 0:
+        if os.path.exists(expjs):
+            f = open(expjs)  
+            try:
+                ids2 = json.load(f)
+            except ValueError as e:
+                ids2 = [] 
+                err(2,f"Збій читання файлу '{expjs}': {e}")
+            f.close()
     
-    if pathlib.Path(appf).is_dir():
-        apps = wpath.Path(appf).glob("*.{" + ",".join(SUPP_EXTS) + "}", flags=wpath.BRACE)
-    else:
-        _, ext = os.path.splitext(appf)
-        ext = ext.lower()[1:]
-        if ext in SUPP_EXTS:
-            apps = iter([appf])
-            appf = pathlib.Path(appf).parent
+        if expjs != "":
+            foutJSON = open(expjs, "w")
+        
+        wu(jss[2] + jss[7])
+    
+        if pathlib.Path(appf).is_dir():
+            apps = wpath.Path(appf).glob("*.{" + ",".join(SUPP_EXTS) + "}", flags=wpath.BRACE)
         else:
-            apps = iter([])
-            err(2,f"Непідтримуваний формат: {ext}")
+            _, ext = os.path.splitext(appf)
+            ext = ext.lower()[1:]
+            if ext in SUPP_EXTS:
+                apps = iter([appf])
+                appf = pathlib.Path(appf).parent
+            else:
+                apps = iter([])
+                err(2,f"Непідтримуваний формат: {ext}")
             
            
-    for app_path in apps:
-        _, ext = os.path.splitext(app_path)
-        ext = ext.lower()[1:]
-        appsTotal = appsTotal + 1
-        appsComplete = appsComplete + append_res(globals()["extract_from_" + SUPP_EXTS[ext]](app_path, os.path.join(appf, expdir, pathlib.Path(app_path).stem)), ids, 1, fmt, uniqued)
+        for app_path in apps:
+            _, ext = os.path.splitext(app_path)
+            ext = ext.lower()[1:]
+            appsTotal = appsTotal + 1
+            appsComplete = appsComplete + append_res(globals()["extract_from_" + SUPP_EXTS[ext]](app_path, os.path.join(expdir, pathlib.Path(app_path).stem)), ids, 1, fmt, uniqued)
 
    
-    if ids2 != []:
-        reformat_list(ids2, fmt, uniqued)
+        if ids2 != []:
+            reformat_list(ids2, fmt, uniqued)
 
-    if (poutCount > 0) and addSepF:
-        wu(jss[4])    
-    wu(jss[8] + jss[3])
+        if (poutCount > 0) and addSepF:
+            wu(jss[4])    
+        wu(jss[8] + jss[3])
     
-    if wposs(foutJSON):
-        foutJSON.close()
+        if wposs(foutJSON):
+            foutJSON.close()   
     
+        if expjs != "":
+            log(f"Дані збережено до: '{expjs}'")
+            
+    elif subact == 1:
+        print("Очищення файлів...")
+        for file in pathlib.Path(expdir).rglob("*"):
+            appsTotal = appsTotal + 1
+            try:
+                file.unlink()
+                logt(f"Спроба видалення: {file}")
+                if file.exists():
+                    err(0, "Немає повноважень")
+            except Exception as e:
+                err(1,f"  Збій видалення {file}: {e}")
+            finally:
+                appsComplete = appsComplete + 1
+                log(f" Вдало видалено:  {file}")
+                
     if not toCons:
-        print( ( FGG if (appsTotal - appsComplete == 0) else FGR ) + f"Готово! {appsComplete} з {appsTotal} оброблено!" + STA)    
+            print( ( FGG if (appsTotal - appsComplete == 0) else FGR ) + f"[Готово]{STA} {appsComplete} з {appsTotal} оброблено!") 
     
-    if expjs!="":
-        log(f"Дані збережено до: '{expjs}'")

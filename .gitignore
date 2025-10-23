@@ -3,3 +3,4 @@ apktool.bat
 apktool.jar
 upx.1
 upx.exe
+*.exe
