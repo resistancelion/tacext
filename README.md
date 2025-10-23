@@ -1,4 +1,4 @@
-# telegram api credentials extractor
+# TACEXT telegram api credentials extractor
 
 Automated Python tool for extraction of CLIEND_ID and CLIENT_HASH for Telegram's MTProto protocol
 
@@ -17,6 +17,7 @@ Automated Python tool for extraction of CLIEND_ID and CLIENT_HASH for Telegram's
 - LICENSE-FREE
 
 Now supports: apk
+
 ## Installation
 
 Clone project to a desired location and navigate to main folder
@@ -28,24 +29,29 @@ Clone project to a desired location and navigate to main folder
 
 install pre-requisites:
 
-```bash
+```
   pip install -r requirements.txt
 ```
 
-Run
-```bash
-  python tacext.py
+If using UNIX-like, grant wrapper the ability to execute
 ```
+  chmod +x tacext
+```
+
 ## Usage/Examples
 
-```bash
-python tacext.py "my_apks_dir" "decompiled_apks" "result.json" -s
+```
+tacext "my_apks_dir" "decompiled_apks" "result.json" -s
 ```
 
-```bash
-python tacext.py "my_apks_dir"
+```
+tacext "my_apks_dir"
 ```
 
-```bash
-python tacext.py "some_file.apk" -j -mini
+```
+tacext "some_file.apk" -j -mini
+```
+
+```
+tacext clean
 ```
