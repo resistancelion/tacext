@@ -325,12 +325,16 @@ def extract_from_apk(apk_path, output_dir):
     if os.path.isdir(output_dir):
         log("Вихідний каталог вже існує, пропуск розбірки")
     else:
-        _ = subprocess.run(["apktool.bat", "d", apk_path, "-o", output_dir, "-f"],
-        stdout=(sys.stdout if logm else subprocess.PIPE),
-        stderr=(subprocess.PIPE if toCons else sys.stderr),
-        stdin=subprocess.DEVNULL,
-        text=True, check=True)
-        if _.stderr == "":
+        try:
+            ok = True
+            _ = subprocess.run(["apktool.bat", "d", apk_path, "-o", output_dir, "-f"],
+            stdout=(sys.stdout if logm else subprocess.PIPE),
+            stderr=(subprocess.PIPE if toCons else sys.stderr),
+            stdin=subprocess.DEVNULL,
+            text=True, check=True)
+        except e:
+            ok = False
+        if (_.stderr is None or _.stderr == "") and ok:
             log(f"Застосунок розібрано до '{output_dir}'")
         
 
