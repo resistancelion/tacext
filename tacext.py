@@ -1,4 +1,4 @@
-import io, re, sys, os, shutil, subprocess, pathlib, json, itertools, urllib.request, xml.etree.ElementTree as ET, wcmatch.pathlib as wpath
+import io, re, sys, os, shutil, subprocess, pathlib, json, itertools, urllib.request, xml.etree.ElementTree as ET
 from frozendict import frozendict as fd
 from colorama import init, Fore as FG, Style as ST
 
@@ -515,23 +515,28 @@ if __name__ == '__main__':
         wu(jss[2] + jss[7])
     
         if pathlib.Path(appf).is_dir():
-            apps = wpath.Path(appf).glob("*.{" + ",".join(SUPP_EXTS) + "}", flags=wpath.BRACE)
+            apps = os.listdir(appf)
         else:
             _, ext = os.path.splitext(appf)
             ext = ext.lower()[1:]
             if ext in SUPP_EXTS:
-                apps = iter([appf])
+                apps = [appf]
                 appf = pathlib.Path(appf).parent
             else:
-                apps = iter([])
+                apps = []
                 err(2,f"Непідтримуваний формат: {ext}")
             
            
         for app_path in apps:
-            _, ext = os.path.splitext(app_path)
-            ext = ext.lower()[1:]
-            appsTotal = appsTotal + 1
-            appsComplete = appsComplete + append_res(globals()["extract_from_" + SUPP_EXTS[ext]](app_path, os.path.join(expdir, pathlib.Path(app_path).stem)), ids, 1, fmt, uniqued)
+            if os.path.isfile:
+                _, ext = os.path.splitext(app_path)
+                ext = ext.lower()[1:]
+            else:
+                ext = ">.<"
+                
+            if ext in SUPP_EXTS:
+                appsTotal = appsTotal + 1
+                appsComplete = appsComplete + append_res(globals()["extract_from_" + SUPP_EXTS[ext]](app_path, os.path.join(expdir, pathlib.Path(app_path).stem)), ids, 1, fmt, uniqued)
 
    
         if ids2 != []:
