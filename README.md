@@ -23,8 +23,8 @@ Now supports: apk
 Clone project to a desired location and navigate to main folder
 
 ```bash
-  git clone https://github.com/resistancelion/telegram_api_credentials_extractor.git
-  cd telegram_api_credentials_extractor
+  git clone https://github.com/resistancelion/tacext.git
+  cd tacext
 ```
 
 install pre-requisites:
