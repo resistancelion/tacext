@@ -7,8 +7,8 @@ FGR = FG.RED
 FGG = FG.GREEN
 
 OFFICIAL_LIST = [ [1], [2], [3], [4], [5], [6], [7], [8], [9], [10], [2040], [2496] ]
-SUPP_EXTS = fd({"apk": "apk", "apkm": "apk", "aab": "apk", "akp": "apk"})
-# xapk/apkx, apks, exe - not ready!
+SUPP_EXTS = fd({"apk": "apk", "apkm": "apk", "aab": "apks", "akp": "apk", "apks": "apks", "xapk": "apks", "apkx": "apks"})
+# exe - not ready!
 
 validconf = fd({"yes": True, "y": True, "ye": True, "no": False, "n": False, "ні": False, "так": True, "нє": False, "та": True, "н": False, "т": True})
 validconfall = fd({"ту":True, "ну":False, "тєу":True, "нєу":False, "усе":True, "ніт":False, "усє":True, "усьо":True, "вт":True, "вн":False, "тв":True, "нв":False, "ут":True, "ун":False, "ys":True, "ns":False, "ya":True, "na":False, "ay":True, "an":False, "all":True, "йєп":True, "ноуп":False})
@@ -34,7 +34,15 @@ def err(t,v):
 def log(v):
     if logm:
         print(f"{FG.YELLOW}[ЗВІТ] {v}{STA}")
+        
+def _ext(f):
+    return os.path.splitext(f)[1].lower()[1:]
     
+def pj(e,a):
+    return os.path.abspath(os.path.join(e, pathlib.Path(a).stem))
+    
+def pj2(p,a):
+    return os.path.abspath(os.path.join(p,a))
 
 def cnfrm(question, default="ні"):
     if yes_to_all:
@@ -215,19 +223,26 @@ def append_res(whatto, li_st, apptype, toformat, uniqued):
 
     if toformat:
         coff = int(isAlreadyIn(OFFICIAL_LIST, whatto[0]))
+        data = [whatto[0], whatto[1], apptype, whatto[2] + " by " + whatto[3], coff]
+        if data in li_st:  # Necessary check for bundled apps filtration
+            return 1
+            
         if poutCount > 0:
             wu(jss[4])
         wu(f'{jss[6]}{jss[0]}{whatto[0]}{jss[5]}"{whatto[1]}"{jss[5]}{apptype}{jss[5]}"{whatto[2]} by {whatto[3]}"{jss[5]}{coff}{jss[1]}')
         poutCount = poutCount + 1
             
-        li_st.append([whatto[0], whatto[1], apptype, whatto[2] + " by " + whatto[3], coff])
+        li_st.append(data)
     else:
+        data = [whatto[0], whatto[1], whatto[2]]
+        if data in li_st:
+            return 1
+       
         if poutCount > 0:
             wu(jss[4])
         wu(f'{jss[6]}{jss[0]}{whatto[0]}{jss[5]}"{whatto[1]}"{jss[5]}"{whatto[2]}"{jss[1]}')
         poutCount = poutCount + 1
-            
-        li_st.append([whatto[0], whatto[1], whatto[2]])
+        li_st.append(data)   
         
     return 1
     
@@ -309,7 +324,7 @@ def extract_app_name_and_developer(output_dir):
     
     return app_name, developer
 
-def extract_from_apk(apk_path, output_dir):
+def extract_from_apk(apk_path, output_dir, _de=True):
     if shutil.which("apktool") is None:
         if not toCons:
             print(f"{FGR}[УВАГА] Необхідно мати APKTool для цього: https://ibotpeaches.github.io/Apktool/{STA}")
@@ -317,10 +332,6 @@ def extract_from_apk(apk_path, output_dir):
             download_tools()
         else:
             sys.exit(1)
-        
-    
-    if not toCons:
-        print("Обробка: " + os.path.basename(apk_path))
     
     if os.path.isdir(output_dir):
         log("Вихідний каталог вже існує, пропуск розбірки")
@@ -357,11 +368,59 @@ def extract_from_apk(apk_path, output_dir):
     if not cid or not chash:
         cid = -1
         chash = "0" * 32
-        if not toCons:
+        if _de:
             err(1,"Неможливо отримати CLIENT_ID або CLIENT_HASH !")
-            print()
+    
+    if not toCons:
+        print()
 
     return cid, chash, cname, cdev
+
+def ext7z(ap, op):
+    try:
+        os.makedirs(op, exist_ok=True)
+        ret = subprocess.run(["7z", "x", ap, f"-o{op}", "-y"], capture_output=True, text=True, check=True)
+        
+        if ret.returncode == 0:
+            return True
+    except Exception as e:
+        err(0,f"7-zip помилка видобування '{ap}': {ret.stderr}")
+        
+    return False
+
+def extract_from_apks(apks_path, output_dir, _de=True):
+    _r = [-1, "0"*32, "Secret", "No one"]
+    
+    if os.path.isdir(output_dir):
+        log("Вихідний каталог вже існує, пропуск розбірки")
+        ret = True
+    else:
+        ret = ext7z(apks_path, output_dir)
+        
+    if ret:
+        cname, cdev = extract_app_name_and_developer(output_dir)
+        li = [pj2(output_dir, _) for _ in os.listdir(output_dir) if os.path.isfile(pj2(output_dir, _)) and _ext(_) in SUPP_EXTS]
+                
+        x = 0
+        for app_path in li:
+            x = x + 1
+            
+            log("Обробка: " + os.path.basename(app_path))
+
+            cid, chash, cn, cd = globals()["extract_from_" + SUPP_EXTS[_ext(app_path)]](app_path, pj(output_dir, app_path), False)
+            if cid == -1:
+                continue
+            else:
+                # In order for AppsComplete to be increased, func must return valid data -- workaround for Apkx
+                # cn, cd - Additional handling of shady practices for apk bundles other than apkx
+                _r = [cid, chash, cn, cd] if cn != "Secret" else [cid, chash, cname, cdev]
+                
+            if x == len(li):
+                return _r
+                
+            append_res([cid, chash, cname, cdev], ids, 1, fmt, uniqued)
+                
+    return _r
 
 if __name__ == '__main__':
     init()
@@ -482,7 +541,7 @@ if __name__ == '__main__':
                 sys.exit(-1)
     
     if expdir == "":
-        expdir = os.path.join((appf if pathlib.Path(appf).is_dir() else pathlib.Path(appf).parent), "extracts")
+        expdir = pj2((appf if pathlib.Path(appf).is_dir() else pathlib.Path(appf).parent), "extracts")
         
     if subact == 0:
         if os.path.exists(expjs):
@@ -500,28 +559,17 @@ if __name__ == '__main__':
         wu(jss[2] + jss[7])
     
         if pathlib.Path(appf).is_dir():
-            apps = os.listdir(appf)
+            apps = [pj2(appf,_) for _ in os.listdir(appf) if os.path.isfile(pj2(appf, _)) and _ext(_) in SUPP_EXTS]
         else:
-            _, ext = os.path.splitext(appf)
-            ext = ext.lower()[1:]
-            if ext in SUPP_EXTS:
-                apps = [appf]
-                appf = pathlib.Path(appf).parent
-            else:
-                apps = []
-                err(2,f"Непідтримуваний формат: {ext}")
+            ext = _ext(appf)
+            apps = [os.path.abspath(appf)] if ext in SUPP_EXTS else [err(2,f"Непідтримуваний формат: {ext}")]
+                
             
            
         for app_path in apps:
-            if os.path.isfile:
-                _, ext = os.path.splitext(app_path)
-                ext = ext.lower()[1:]
-            else:
-                ext = ">.<"
-                
-            if ext in SUPP_EXTS:
-                appsTotal = appsTotal + 1
-                appsComplete = appsComplete + append_res(globals()["extract_from_" + SUPP_EXTS[ext]](app_path, os.path.join(expdir, pathlib.Path(app_path).stem)), ids, 1, fmt, uniqued)
+            appsTotal = appsTotal + 1
+            log("Обробка: " + os.path.basename(app_path))
+            appsComplete = appsComplete + append_res(globals()["extract_from_" + SUPP_EXTS[_ext(app_path)]](app_path, pj(expdir, app_path)), ids, 1, fmt, uniqued)
 
    
         if ids2 != []:
