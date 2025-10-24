@@ -114,7 +114,7 @@ def download_tools():
         
     if not _:
         err(0,"Неможливо завантажити важливі інструменти")
-        exit(-1)
+        sys.exit(-1)
 
     return
  
@@ -232,8 +232,8 @@ def append_res(whatto, li_st, apptype, toformat, uniqued):
     
 def extract_api_from_smali(content):
     lines = content.split('\n')
-    api_id = None
-    api_hash = None
+    cid = None
+    chash = None
     current_v = {}
     
     for i, line in enumerate(lines):
@@ -257,7 +257,7 @@ def extract_api_from_smali(content):
         if sput_id_match:
             reg = sput_id_match.group(1)
             if reg in current_v:
-                api_id = current_v[reg]
+                cid = current_v[reg]
             continue
         
         # Match sput-object for CLIENT_HASH
@@ -265,20 +265,20 @@ def extract_api_from_smali(content):
         if sput_hash_match:
             reg = sput_hash_match.group(1)
             if reg in current_v:
-                api_hash = current_v[reg]
+                chash = current_v[reg]
             continue
         
         # For direct = assignments in fields
         direct_id_match = re.search(r'(APP|API)_ID:I = (0x[\da-fA-F]+|\d+)', line, re.IGNORECASE)
         if direct_id_match:
             value = direct_id_match.group(2)
-            api_id = int(value, 16) if value.startswith('0x') else int(value)
+            cid = int(value, 16) if value.startswith('0x') else int(value)
         
         direct_hash_match = re.search(r'(APP|API)_HASH:Ljava/lang/String; = "([0-9a-f]{32})"', line, re.IGNORECASE)
         if direct_hash_match:
-            api_hash = direct_hash_match.group(2)
+            chash = direct_hash_match.group(2)
     
-    return api_id, api_hash
+    return cid, chash
 
 def extract_app_name_and_developer(output_dir):
     manifest_path = os.path.join(output_dir, 'AndroidManifest.xml')
@@ -315,8 +315,7 @@ def extract_from_apk(apk_path, output_dir):
         if cnfrm("Встановити автоматично?"):
             download_tools()
         else:
-            exit(1)
-            return
+            sys.exit(1)
         
     
     if not toCons:
@@ -339,43 +338,29 @@ def extract_from_apk(apk_path, output_dir):
         
 
     # Пошук у розібраному коді
-    api_id = None
-    api_hash = None
+    cname, cdev = extract_app_name_and_developer(output_dir)
+    cid = None
+    chash = None
     for root, _, files in os.walk(output_dir):
         for file in files:
             if file.endswith(('.smali', '.xml', '.java', '.smol', '.small', '.smal')):
                 with open(os.path.join(root, file), 'r', encoding='utf-8', errors='ignore') as f:
-                    content = f.read()
-                    api_id, api_hash = extract_api_from_smali(content)
-                    if api_id and api_hash:
-                        break
-        if api_id and api_hash:
-            break
-
+                    cid, chash = extract_api_from_smali(f.read())
+                    if cid and chash:
+                        if not toCons:
+                            print(FGG + f"Отримано: CLIENT_ID={cid}, CLIENT_HASH={chash}" + STA)
+                            print()
+                        return cid, chash, cname, cdev
+                            
     # У випадку невдачі, виконати прямий пошук у APK...
-    if not api_id or not api_hash:
-        with open(apk_path, 'rb') as f:
-            data = f.read()
-            # Пошук відомих CLIENT_ID у форматі little-endian
-            for target_id in OFFICIAL_LIST:
-                id_bytes = int.to_bytes(target_id[0], 4, 'little')
-                offset = data.find(id_bytes)
-                if offset != -1:
-                    api_id = target_id[0]
-                    if not toCons:
-                        print(FGG + f"Знайдено: CLIENT_ID={api_id} на позиції 0x{offset:X}" + STA)
+    if not cid or not chash:
+        cid = 0
+        chash = "0" * 32
+        if not toCons:
+            err(1,"Неможливо отримати CLIENT_ID або CLIENT_HASH !")
+            print()
 
-    app_name, developer = extract_app_name_and_developer(output_dir)
-    
-    if not toCons:
-        if api_id and api_hash:
-            print(FGG + f"Отримано: CLIENT_ID={api_id}, CLIENT_HASH={api_hash}" + STA)
-        else:
-            err(0,"Неможливо отримати CLIENT_ID або CLIENT_HASH !")
-        
-        print()
-        
-    return api_id, api_hash, app_name, developer
+    return cid, chash, cname, cdev
 
 if __name__ == '__main__':
     init()
@@ -494,7 +479,7 @@ if __name__ == '__main__':
                     
             if rsError:
                 err(1,f"Невідома опція: {sys.argv[x]}")
-                exit(1)
+                sys.exit(-1)
     
     if expdir == "":
         expdir = os.path.join((appf if pathlib.Path(appf).is_dir() else pathlib.Path(appf).parent), "extracts")
