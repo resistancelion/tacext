@@ -15,12 +15,12 @@ validconfall = fd({"ту":True, "ну":False, "тєу":True, "нєу":False, "у
 yes_to_all = False
 no_to_all = False
 logm = True
+foutJSON = None
 
 def wposs(v):
     return isinstance(v, io.IOBase) and hasattr(v, 'write') and not v.closed
     
 def wu(content):
-    global foutJSON
     if toCons:
         sys.stdout.write(content)
     
@@ -209,22 +209,23 @@ def append_res(whatto, li_st, apptype, toformat, uniqued):
     if uniqued:
         if isAlreadyIn(li_st, whatto[0]):
             return 1
+            
+    if whatto[0] == -1:
+        return 0
 
     if toformat:
         coff = int(isAlreadyIn(OFFICIAL_LIST, whatto[0]))
-        if toCons:
-            if poutCount > 0:
-                wu(jss[4])
-            wu(f'{jss[6]}{jss[0]}{whatto[0]}{jss[5]}"{whatto[1]}"{jss[5]}{apptype}{jss[5]}"{whatto[2]} by {whatto[3]}"{jss[5]}{coff}{jss[1]}')
-            poutCount = poutCount + 1
+        if poutCount > 0:
+            wu(jss[4])
+        wu(f'{jss[6]}{jss[0]}{whatto[0]}{jss[5]}"{whatto[1]}"{jss[5]}{apptype}{jss[5]}"{whatto[2]} by {whatto[3]}"{jss[5]}{coff}{jss[1]}')
+        poutCount = poutCount + 1
             
         li_st.append([whatto[0], whatto[1], apptype, whatto[2] + " by " + whatto[3], coff])
     else:
-        if toCons:
-            if poutCount > 0:
-                wu(jss[4])
-            wu(f'{jss[6]}{jss[0]}{whatto[0]}{jss[5]}"{whatto[1]}"{jss[5]}"{whatto[2]}"{jss[1]}')
-            poutCount = poutCount + 1
+        if poutCount > 0:
+            wu(jss[4])
+        wu(f'{jss[6]}{jss[0]}{whatto[0]}{jss[5]}"{whatto[1]}"{jss[5]}"{whatto[2]}"{jss[1]}')
+        poutCount = poutCount + 1
             
         li_st.append([whatto[0], whatto[1], whatto[2]])
         
@@ -354,7 +355,7 @@ def extract_from_apk(apk_path, output_dir):
                             
     # У випадку невдачі, виконати прямий пошук у APK...
     if not cid or not chash:
-        cid = 0
+        cid = -1
         chash = "0" * 32
         if not toCons:
             err(1,"Неможливо отримати CLIENT_ID або CLIENT_HASH !")
@@ -367,9 +368,8 @@ if __name__ == '__main__':
     subact = 0
     appsTotal = 0
     appsComplete = 0
-    global poutCount, foutJSON
+    global poutCount
     poutCount = 0
-    foutJSON = None
     ids = []
     ids2 = []
     
@@ -379,8 +379,8 @@ if __name__ == '__main__':
     fmt = False
     toCons = False
     
-    # [ArrayStartCode, ArrayEndCode, StartCode, EndCode, ArrayElementSeparator, ArrayEndSeparator, ArrayStartSeparator, StartCodeAppendix, EndCodePrependix
-    jss = ['{', '}',"{","}",", ",",", os.linesep + "\t", "", os.linesep]
+    # [ArrayStartCode, ArrayEndCode, StartCode, EndCode, ArrayEndSeparator, ArrayElementSeparator, ArrayStartSeparator, StartCodeAppendix, EndCodePrependix
+    jss = ['{', '}',"{","}",",",", ", "\n\t", "", "\n"]
     JSS_MFS = ["jss=", "jsonsyntax=", "jsonsyntaxis=", "jsonsyntacsys=", "jsonsyntaxys=", "жск=", "жсс=", "сінтжс=", "синтжс=", "жсонс=", "jsons=", "osf=", "фвс="]
     tc = ["-json", "-js", "-j",  "-d",  "-н", "-ж", "-к"]
     mjs = ["-min", "-minjs", "-minjson", "-minified", "-mini", "-мінімізований", "-мін", "-мінжс", "-мініжсон", "-міні"]
@@ -435,7 +435,7 @@ if __name__ == '__main__':
                 logm = False
                 continue    
                 
-            if arx in aSepF:
+            if arx in asepF:
                 addSepF = True
                 continue
                 
